@@ -67,15 +67,69 @@ static int mytraffic_release(struct inode *inode, struct file *filp){
 
 
 static ssize_t mytraffic_read(struct file *filp, char *buf, size_t count, loff_t *f_pos){
+    char traffic_data[250];
+    int data_len = 0;
+    int red_state = gpio_get_value(RED_GPIO);
+    int yellow_state = gpio_get_value(YELLOW_GPIO);
+    int green_state = gpio_get_value(GREEN_GPIO);
 
-	return 0;
+    if (*f_pos > 0) {
+        return 0;
+    }
+
+    data_len = snprintf(traffic_data, sizeof(traffic_data),
+                        "Operational Mode: %d\n"
+                        "Frequency: %d\n"
+                        "Pedestrian Button: %d\n"
+                        "Red Light: %s\n"
+                        "Yellow Light: %s\n"
+                        "Green Light: %s\n",
+                        operational_mode, frequency, pedestrian_button,
+                        red_state ? "On" : "Off",
+                        yellow_state ? "On" : "Off",
+                        green_state ? "On" : "Off");
+    //Limit the 'bite' to 250 arbitrary
+    if (data_len > count) {
+        data_len = count;
+    }
+
+    if (copy_to_user(buf, traffic_data, data_len)) {
+        return -EFAULT;
+    }
+
+    *f_pos += data_len;
+
+    return data_len;
 }
 
 
 static ssize_t mytraffic_write(struct file *filp, const char *buf, size_t count, loff_t *f_pos){
+    int new_freq;
+    char input_buff[10];
+    //Set max Hz to 9
+    if (count > 9)
+        count = 9;
 
-	return 0;
+    if (copy_from_user(input_buff, buf, count)) {
+        return -EFAULT;
+    }
 
+    input_buff[count] = '\0';
+
+    //Error handling
+    if (kstrtoint(input_buff, 10, &new_freq) < 0) {
+        printk(KERN_ALERT "Invalid input for frequency\n");
+        return -EINVAL;
+    }
+
+    if (new_freq < 1) {
+        printk(KERN_ALERT "Frequency must be greater than 0\n");
+        return -EINVAL;
+    }
+
+    frequency = new_freq;
+
+    return count;
 }
 
 
