@@ -100,6 +100,7 @@ static ssize_t mytraffic_read(struct file *filp, char *buf, size_t count, loff_t
     *f_pos += data_len;
 
     return data_len;
+	
 }
 
 
