@@ -35,6 +35,7 @@ int BTN1_irq_num = 0;
 int operational_mode = 0; // 0 = Normal mode, 1 = Flashing-Red mode, 2 = Flashing-Yellow mode
 int frequency = 1; // Length of cycle = 1/user_input
 int pedestrian_button = 0;
+int irq0, irq1;
 
 // Define waitqueue
 wait_queue_head_t wq;
@@ -43,18 +44,18 @@ static struct task_struct* my_task; // Used for new thread
 DECLARE_WAIT_QUEUE_HEAD(wq);
 
 static int mytraffic_init(void);
-int mytraffic_main(void* i);
+static int mytraffic_main(void* i);
 static irqreturn_t btn0_irq_handler(int irq,void *dev_id);
 static irqreturn_t btn1_irq_handler(int irq,void *dev_id);
 static int mytraffic_open(struct inode *inode, struct file *filp);
 static int mytraffic_release(struct inode *inode, struct file *filp);
 static ssize_t mytraffic_read(struct file *filp, char *buf, size_t count, loff_t *f_pos);
 static ssize_t mytraffic_write(struct file *filp, const char *buf, size_t count, loff_t *f_pos);
-void normal_mode(void); // Might need to include frequency later
-void flashing_red(void);
-void flashing_yellow(void);
-void turn_off_lights(void);
-void turn_on_lights(void);
+static void normal_mode(void); // Might need to include frequency later
+static void flashing_red(void);
+static void flashing_yellow(void);
+static void turn_off_lights(void);
+static void turn_on_lights(void);
 
 static int mytraffic_open(struct inode *inode, struct file *filp){
 	return 0;
@@ -73,18 +74,24 @@ static ssize_t mytraffic_read(struct file *filp, char *buf, size_t count, loff_t
     int yellow_state = gpio_get_value(YELLOW_GPIO);
     int green_state = gpio_get_value(GREEN_GPIO);
 
+    const char *str_array[3];
+    str_array[0] = "normal";
+    str_array[1] = "flashing-red";
+    str_array[2] = "flashing-yellow";
+
+
     if (*f_pos > 0) {
         return 0;
     }
 
     data_len = snprintf(traffic_data, sizeof(traffic_data),
-                        "Operational Mode: %d\n"
+                        "Operational Mode: %s\n"
                         "Frequency: %d\n"
                         "Pedestrian Button: %d\n"
                         "Red Light: %s\n"
                         "Yellow Light: %s\n"
                         "Green Light: %s\n",
-                        operational_mode, frequency, pedestrian_button,
+                        str_array[operational_mode], frequency, pedestrian_button,
                         red_state ? "On" : "Off",
                         yellow_state ? "On" : "Off",
                         green_state ? "On" : "Off");
@@ -239,8 +246,8 @@ static int  mytraffic_init(void){
 	BTN0_irq_num = gpio_to_irq(BTN0_GPIO);
 	BTN1_irq_num = gpio_to_irq(BTN1_GPIO);
 
-	int irq0 = request_irq(BTN0_irq_num, (void *) btn0_irq_handler, IRQF_TRIGGER_FALLING , "btn0", NULL);
-	int irq1 = request_irq(BTN1_irq_num, (void *) btn1_irq_handler, IRQF_TRIGGER_FALLING , "btn1", NULL);
+	irq0 = request_irq(BTN0_irq_num, (void *) btn0_irq_handler, IRQF_TRIGGER_FALLING , "btn0", NULL);
+	irq1 = request_irq(BTN1_irq_num, (void *) btn1_irq_handler, IRQF_TRIGGER_FALLING , "btn1", NULL);
 
 	// TEST IDEA add request IRQ for 
 	//int irq2 = request_irq(BTN0_irq_num, (void *) btn2_irq_handler, IRQF_TRIGGER_HIGH , "btn0", NULL);
@@ -263,7 +270,7 @@ static int  mytraffic_init(void){
 }
 
 
-int mytraffic_main(void* i){
+static int mytraffic_main(void* i){
 	// What ought to be a main function
 	while (!kthread_should_stop()) {
 		switch(operational_mode){
@@ -279,52 +286,53 @@ int mytraffic_main(void* i){
 		}
 	}
 	// Apparently it doesnt recognize kthread_exit
-	//kthread_exit(); 
+	//kthread_exit();
 	return 0;
 }
 
-void flashing_red(void){
+static void flashing_red(void){
 	// Continuous flashing of red light, one cycle on one cycle off
 	turn_off_lights();
 
-	while(operational_mode == 1){
+	while(operational_mode == 1 && !kthread_should_stop()){
 		gpio_set_value(RED_GPIO,1);
 		wait_event_interruptible_timeout(wq, 1==0, 1 * (HZ / frequency));
 		gpio_set_value(RED_GPIO,0);
 		wait_event_interruptible_timeout(wq, 1==0, 1 * (HZ / frequency));
 	}
-
+	return;
 }
 
-void flashing_yellow(void){
+static void flashing_yellow(void){
 	// Continuously flash yellow, one cycle on one cycle off
 	turn_off_lights();
 
-	while(operational_mode == 2){
+	while(operational_mode == 2 && !kthread_should_stop()){
 		gpio_set_value(YELLOW_GPIO,1);
 		wait_event_interruptible_timeout(wq, 1==0, 1 * (HZ / frequency));
 		gpio_set_value(YELLOW_GPIO,0);
 		wait_event_interruptible_timeout(wq, 1==0, 1 * (HZ / frequency));
 	}
+	return;
 }
 
-void turn_off_lights(void){
+static void turn_off_lights(void){
 	gpio_set_value(RED_GPIO,0);
 	gpio_set_value(YELLOW_GPIO,0);
 	gpio_set_value(GREEN_GPIO,0);
 }
 
-void turn_on_lights(void){
+static void turn_on_lights(void){
 	gpio_set_value(RED_GPIO,1);
 	gpio_set_value(YELLOW_GPIO,1);
 	gpio_set_value(GREEN_GPIO,1);
 }
 
-void normal_mode(void){
+static void normal_mode(void){
 	// Green for 3 cycles, yellow for one cycle, red for 2 cycles
 	turn_off_lights();
 
-	while(operational_mode == 0){
+	while(operational_mode == 0 && !kthread_should_stop()){
 		if(pedestrian_button == 0){		
 			gpio_set_value(GREEN_GPIO,1); // Green runs for 3 cycles
 			wait_event_interruptible_timeout(wq, 1==0, 3 * (HZ / frequency));
@@ -355,21 +363,27 @@ void normal_mode(void){
 			pedestrian_button = 0;
 		}
 	}	
+	return;
 }
 
-
-void mytraffic_exit(void){
+static void offload_GPIO(int gpio_num){
 	
-	// Free GPIO
-	gpio_free(RED_GPIO);	
-	gpio_free(YELLOW_GPIO);	
-	gpio_free(GREEN_GPIO);	
-	gpio_free(BTN0_GPIO);
-	gpio_free(BTN1_GPIO);
-	// TRY
-	//kthread_exit(my_task); 
+	gpio_set_value(gpio_num, 0);
+	gpio_unexport(gpio_num);
+	gpio_free(gpio_num);
+}
+
+static void mytraffic_exit(void){
+	
 	kthread_stop(my_task);
+	free_irq(irq0 ,NULL);
+	free_irq(irq1 ,NULL);
         unregister_chrdev(mytraffic_major, "mytraffic");
+	offload_GPIO(RED_GPIO);
+	offload_GPIO(YELLOW_GPIO);
+	offload_GPIO(GREEN_GPIO);
+	offload_GPIO(BTN0_GPIO);
+	offload_GPIO(BTN1_GPIO);
 }
 
 module_init(mytraffic_init);
