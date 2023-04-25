@@ -13,15 +13,15 @@ Before flashing the SD Card - modify the 'instances' file in $WORKSPACE/rootfs/e
 #networking file for SERVER BBB
 #change address to 192.168.1.3 for CLIENT BBB
 
-auto eth0
-iface eth0 inet dhcp
-  pre-up /etc/network/nfs_check
-  wait-delay 15
-  hostname $(hostname)
-
-iface eth0 inet static
-  address 192.168.1.2
-  netmask 255.255.255.0
+auto eth0  
+iface eth0 inet dhcp  
+  pre-up /etc/network/nfs_check  
+  wait-delay 15  
+  hostname $(hostname)  
+  
+iface eth0 inet static  
+  address 192.168.1.2    
+  netmask 255.255.255.0  
 
 For EmbedmonServer: set the ip to 192.168.1.2
 Then rebuild your rootfs and bootfs, create sdcard.img and flash the microSD.
