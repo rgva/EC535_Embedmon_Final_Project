@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>sprites/freezon_sprite0.png</file>
+        <file>sprites/freezon_sprite1.png</file>
+        <file>sprites/freezon_sprite2.png</file>
+        <file>sprites/ignis_sprite0.png</file>
+        <file>sprites/ignis_sprite1.png</file>
+        <file>sprites/ignis_sprite2.png</file>
+        <file>sprites/FreezionIdle.gif</file>
+        <file>sprites/IgnisIdle.gif</file>
+    </qresource>
+</RCC>
