@@ -4,32 +4,38 @@
 #include <QMovie> //Sprite .gif handler
 #include <QTcpServer> //Server handler
 #include <QTcpSocket> //Socket handler
+/*Background Image Handler*/
+#include <QPalette>
+#include <QBrush>
+/*Handle Battle Animations*/
+#include <QPropertyAnimation>
+#include <QTimer>
+/* Header files */
 #include "embedmonserver.h"
 #include "ui_widget.h"
-#include <QDebug>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
 {
-
     ui->setupUi(this);
-
-    //Timer initialization
-    timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this,SLOT(myfunction()));
-    timer->start(500); //Interval in milliseconds
-
 
     /*Declare server*/
     server = new QTcpServer(this);
     connect(server, &QTcpServer::newConnection, this, &Widget::handleNewConnection);
     /*Listen for incoming connections to hard-coded port */
-    if (!server->listen(QHostAddress::Any, 9999)) {
+    if (!server->listen(QHostAddress::LocalHost, 9999)) { //Change QHostAddress::LocalHost to Any before deploying to BBB
         qDebug() << "Server could not start";
     } else {
         qDebug() << "Server started";
     }
+
+    /*Setup background image*/
+    QPixmap backgroundPixmap(":/images/battlebackground.png");
+    QPalette palette;
+    palette.setBrush(QPalette::Window, backgroundPixmap);
+    this->setAutoFillBackground(true);
+    this->setPalette(palette);
 
     /*Declare player actions*/
     player1Action = Action::None;
@@ -46,8 +52,8 @@ Widget::Widget(QWidget *parent)
     player1Sprite = new QLabel(this);
     player2Sprite = new QLabel(this);
     //Load gif animations
-    QMovie *player1Movie = new QMovie(":/sprites/FreezionIdle.gif");
-    QMovie *player2Movie = new QMovie(":/sprites/IgnisIdle.gif");
+    QMovie *player1Movie = new QMovie(":/sprites/RockyIdle_fr.gif");
+    QMovie *player2Movie = new QMovie(":/sprites/FreezeIdle_fl.gif");
     //Set movie to Qlabel objects
     player1Sprite->setMovie(player1Movie);
     player2Sprite->setMovie(player2Movie);
@@ -57,29 +63,6 @@ Widget::Widget(QWidget *parent)
     player1Sprite->move(130, 150);
     player2Sprite->move(260, 150);
 
-
-
-    /* Pixmap implementation */
-    //QPixmap player1Pixmap(":/sprites/ignis_sprite0.png");
-    //QPixmap player2Pixmap(":/sprites/freezon_sprite0.png");
-
-    // Set the pixmap to the QLabel objects
-    //player1Sprite->setPixmap(player1Pixmap);
-    //player2Sprite->setPixmap(player2Pixmap);
-
-    // Position the sprites (adjust the coordinates as needed)
-    //player1Sprite->move(140, 190);
-    //player2Sprite->move(280, 190);
-
-    // Frame initialization for updateSprites() function
-    //player1Frame = 0;
-    //player2Frame = 0;
-
-    // Initialize and start the animation timer
-    //QTimer *spriteTimer = new QTimer(this);
-    //spriteTimer->setInterval(200);
-    //connect(spriteTimer, &QTimer::timeout, this, &Widget::updateSprites);
-    //spriteTimer->start();
 }
 
 /*Touch Screen Implementation */
@@ -130,81 +113,96 @@ void Widget::handleDataFromClient() {
         // Read the data from the client
         QByteArray data = clientConnection->readAll();
 
-        // Process the received data
-        QString action(data);
-        if (action == "lattackP2") {
-            lattackP2_clicked();
-        } else if (action == "sattackP2") {
-            sattackP2_clicked();
-        } else if (action == "blockP2") {
-            blockP2_clicked();
-        } else if (action == "potionP2") {
-            potionP2_clicked();
-        } else {
-            qWarning() << "Unknown action received:" << action;
-        }
+        qDebug() << "Received data from client:" << data; // Add this debug statement
+
+        QDataStream stream(&data, QIODevice::ReadOnly);
+        int p1Action, p2Action;
+        stream >> p1Action >> p2Action;
+        qDebug() << "Deserialized actions from client:" << p1Action << p2Action;
+        player1Action = static_cast<Action>(p1Action);
+        player2Action = static_cast<Action>(p2Action);
+
+        updateHealthBars();
+        checkGameOver();
+
+        // Execute the round based on the received actions
+        executeRound(player1Action, player2Action);
+
+        // Send updated health and actions to the client
         sendDataToClient();
     }
 }
+
 
 void Widget::sendDataToClient() {
     if (clientConnection && clientConnection->state() == QAbstractSocket::ConnectedState) {
         QByteArray data;
         QDataStream stream(&data, QIODevice::WriteOnly);
-        stream << player1.health << player2.health;
+        stream << player1.health << player2.health << static_cast<int>(player1Action) << static_cast<int>(player2Action);
         clientConnection->write(data);
+        qDebug() << "Sending data to client:" << data;
     }
 }
-
 
 /* Possible Actions */
 // Player 1 Actions
 void Widget::lattackP1_clicked() {
     player1Action = Action::LightAttack;
     checkBothPlayersReady();
+    //qDebug() << "Player 1 clicked Light Attack";
 }
 
 void Widget::sattackP1_clicked() {
     player1Action = Action::StrongAttack;
     checkBothPlayersReady();
+    //qDebug() << "Player 1 clicked Strong Attack";
+
 }
 
 void Widget::blockP1_clicked() {
     player1Action = Action::Block;
     checkBothPlayersReady();
+    //qDebug() << "Player 1 clicked Block";
+
 }
 
 void Widget::potionP1_clicked() {
     player1Action = Action::Potion;
     checkBothPlayersReady();
+    //qDebug() << "Player 1 clicked Potion";
+
 }
 
 // Player 2 Actions
 void Widget::lattackP2_clicked() {
     player2Action = Action::LightAttack;
     checkBothPlayersReady();
+    //qDebug() << "Player 2 clicked Light Attack";
 }
 
 void Widget::sattackP2_clicked() {
     player2Action = Action::StrongAttack;
     checkBothPlayersReady();
+    //qDebug() << "Player 2 clicked Strong Attack";
 }
 
 void Widget::blockP2_clicked() {
     player2Action = Action::Block;
     checkBothPlayersReady();
+    //qDebug() << "Player 2 clicked Block";
 }
 
 void Widget::potionP2_clicked() {
     player2Action = Action::Potion;
     checkBothPlayersReady();
+    //qDebug() << "Player 2 clicked Potion";
 }
 
 /* This function checks if both players have chosen their move before executing the round */
 void Widget::checkBothPlayersReady() {
     if (player1Action != Action::None && player2Action != Action::None) {
         // Execute the round with the chosen actions.
-        executeRound();
+        executeRound(player1Action, player2Action);
 
         // Reset the actions for the next round.
         player1Action = Action::None;
@@ -212,11 +210,36 @@ void Widget::checkBothPlayersReady() {
     }
 }
 
+/*Play the attack animation */
+void Widget::playAttackAnimation(int player) {
+    if (player == 1) {
+        QMovie *player1AttackMovie = new QMovie(":/sprites/RockyAttack_fr.gif");
+        player1Sprite->setMovie(player1AttackMovie);
+        player1AttackMovie->start();
+    } else if (player == 2) {
+        QMovie *player2AttackMovie = new QMovie(":/sprites/FreezeAttack_fl.gif");
+        player2Sprite->setMovie(player2AttackMovie);
+        player2AttackMovie->start();
+    }
+    QTimer::singleShot(2000, this, &Widget::resetIdleAnimation);
+}
+
+void Widget::resetIdleAnimation() {
+    QMovie *player1Movie = new QMovie(":/sprites/RockyIdle_fr.gif");
+    QMovie *player2Movie = new QMovie(":/sprites/FreezeIdle_fl.gif");
+    player1Sprite->setMovie(player1Movie);
+    player2Sprite->setMovie(player2Movie);
+    player1Movie->start();
+    player2Movie->start();
+}
+
 /* This function executes the round, handles damage calculations */
-void Widget::executeRound() {
+void Widget::executeRound(Action player1Action, Action player2Action) {
+    qDebug() << "Player 1 action:" << static_cast<int>(player1Action);
+    qDebug() << "Player 2 action:" << static_cast<int>(player2Action);
     int player1Damage = 0;
     int player2Damage = 0;
-
+    qDebug() << "Round is executing";
     // Handle player 1 actions.
     switch (player1Action) {
     case Action::LightAttack:
@@ -275,9 +298,11 @@ void Widget::executeRound() {
     player1.health = qMax(0, qMin(player1.health, 100));
     player2.health = qMax(0, qMin(player2.health, 100));
 
-    // Update health bars and check for game over.
-    updateHealthBars();
-    checkGameOver();
+    // Delay rounds by 2 second, update health bars and check for game over.
+    QTimer::singleShot(2000, this, [this](){
+        updateHealthBars();
+        checkGameOver();
+    });
 }
 
 void Widget::updateHealthBars() {
@@ -291,24 +316,8 @@ void Widget::checkGameOver() {
         // Reset the game state or close the application.
     }
 }
-void Widget::updateSprites() {
-    // Update player 1's sprite frame
-    player1Frame = (player1Frame + 1) % 3;
-    QPixmap player1Pixmap(QString(":/sprites/ignis_sprite%1.png").arg(player1Frame));
-    player1Sprite->setPixmap(player1Pixmap);
-
-    // Update player 2's sprite frame
-    player2Frame = (player2Frame + 1) % 3;
-    QPixmap player2Pixmap(QString(":/sprites/freezon_sprite%1.png").arg(player2Frame));
-    player2Sprite->setPixmap(player2Pixmap);
-}
 
 Widget::~Widget()
 {
     delete ui;
-}
-
-void Widget::myfunction()
-{
-    qDebug() << "timer went off!\n";
 }

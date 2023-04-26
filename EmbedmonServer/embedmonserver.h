@@ -1,5 +1,5 @@
-#ifndef WIDGET_H
-#define WIDGET_H
+#ifndef EMBEDMONSERVER_H
+#define EMBEDMONSERVER_H
 
 #include <QWidget>
 #include <QRandomGenerator>
@@ -12,8 +12,6 @@
 /* Networking functionality includes */
 #include <QTcpServer>
 #include <QTcpSocket>
-// Timer
-#include <QTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -39,32 +37,13 @@ public:
         currentAction = action;
     }
 
-    int lightAttack() {
-        if (QRandomGenerator::global()->generateDouble() < 0.1) return 0; // 10% miss chance
-        return QRandomGenerator::global()->bounded(8, 13); // 8-12 damage
-    }
-
-    int strongAttack() {
-        if (QRandomGenerator::global()->generateDouble() < 0.5) return 0; // 50% miss chance
-        return QRandomGenerator::global()->bounded(15, 26); // 15-25 damage
-    }
-
-    bool block() {
-        return QRandomGenerator::global()->generateDouble() < 0.5; // 50% chance to increase miss chance
-    }
-
-    int useHealthPotion() {
-        if (healthPotion > 0) {
-            healthPotion--;
-            return 25;
-        }
-        return 0;
-    }
+    int lightAttack();
+    int strongAttack();
+    bool block();
+    int useHealthPotion();
 };
 
-
 class Widget : public QWidget
-
 {
     Q_OBJECT
 
@@ -72,8 +51,7 @@ public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
 public slots:
-    void myfunction();
-
+    void playAttackAnimation(int player);
 private:
     Ui::Widget *ui;
     /*Declare characters*/
@@ -93,12 +71,13 @@ private:
     void potionP2_clicked();
     /*Game mechanic functions*/
     void checkBothPlayersReady();
-    void executeRound();
+    void executeRound(Action player1Action, Action player2Action);
     void updateHealthBars();
     void checkGameOver();
     /*Sprite functions*/
     QLabel *player1Sprite;
     QLabel *player2Sprite;
+    void resetIdleAnimation();
     //Establishes delays between sprite frames
     QTimer *animationTimer;
     //Initialize the player sprite frames
@@ -107,11 +86,8 @@ private:
     //Intialize networking
     QTcpServer *server;
     QTcpSocket *clientConnection;
-    QTimer *timer; //Timer
 
 private slots:
-    //Function to update sprites
-    void updateSprites();
     // Function to handle networking & data from clients
     void handleNewConnection();
     void handleDataFromClient();
@@ -123,4 +99,4 @@ protected:
 
 };
 
-#endif // WIDGET_H
+#endif // EMBEDMONSERVER_H

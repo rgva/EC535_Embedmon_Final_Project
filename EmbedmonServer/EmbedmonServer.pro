@@ -13,6 +13,7 @@ SOURCES += \
     main.cpp
 
 HEADERS += \
+    embedmonserver.h \
     embedmonserver.h
 
 FORMS += \
@@ -27,11 +28,17 @@ RESOURCES += \
     resources.qrc
 
 DISTFILES += \
+    images/battlebackground.png \
+    sprites/FreezeAttack_fl.gif \
+    sprites/FreezeIdle_fl.gif \
     sprites/FreezionIdle.gif \
     sprites/IgnisIdle.gif \
+    sprites/RockyIdle_fr.gif \
+    sprites/freezeridle_fl.gif \
     sprites/freezon_sprite0.png \
     sprites/freezon_sprite1.png \
     sprites/freezon_sprite2.png \
     sprites/ignis_sprite0.png \
     sprites/ignis_sprite1.png \
-    sprites/ignis_sprite2.png
+    sprites/ignis_sprite2.png \
+    sprites/rockyattack_fr.gif
