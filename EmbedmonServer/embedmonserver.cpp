@@ -6,12 +6,20 @@
 #include <QTcpSocket> //Socket handler
 #include "embedmonserver.h"
 #include "ui_widget.h"
+#include <QDebug>
 
 Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
 {
+
     ui->setupUi(this);
+
+    //Timer initialization
+    timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this,SLOT(myfunction()));
+    timer->start(500); //Interval in milliseconds
+
 
     /*Declare server*/
     server = new QTcpServer(this);
@@ -298,4 +306,9 @@ void Widget::updateSprites() {
 Widget::~Widget()
 {
     delete ui;
+}
+
+void Widget::myfunction()
+{
+    qDebug() << "timer went off!\n";
 }

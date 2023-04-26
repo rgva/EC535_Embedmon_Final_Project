@@ -12,6 +12,8 @@
 /* Networking functionality includes */
 #include <QTcpServer>
 #include <QTcpSocket>
+// Timer
+#include <QTimer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -69,6 +71,8 @@ class Widget : public QWidget
 public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
+public slots:
+    void myfunction();
 
 private:
     Ui::Widget *ui;
@@ -103,6 +107,7 @@ private:
     //Intialize networking
     QTcpServer *server;
     QTcpSocket *clientConnection;
+    QTimer *timer; //Timer
 
 private slots:
     //Function to update sprites
