@@ -30,6 +30,15 @@ public:
     int healthPotion = 1;
 };
 
+/* This class lists out all possible actions in a move */
+enum class Action {
+    None,
+    LightAttack,
+    StrongAttack,
+    Block,
+    Potion
+};
+
 class Widget : public QWidget
 
 
@@ -40,6 +49,9 @@ public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
     void connectToServer(const QString &serverIP, quint16 serverPort); //Initialize erver connection
+
+public slots:
+    void resetIdleAnimations(int delay);
 
 protected:
     bool event(QEvent *event) override;
@@ -60,8 +72,20 @@ private:
     QLabel *player2Sprite;
     //Intialize networking
     QTcpSocket *clientSocket;
+    /*Health bar updating */
+    void updateHealthBars();
+    /*Delay timer*/
+    QTimer *delayTimer;
+    /*Actions*/
+    Action player1Action;
+    Action player2Action;
+    /*Animations*/
+    void playAnimations();
+    /*Debuggin*/
+    void printDeserializedValues(qint32 player1Health, qint32 player2Health, qint32 player1Action, qint32 player2Action);
 
-    void sendDataToServer(const QByteArray &data);
+
+    void sendDataToServer(Action player1Action, Action player2Action);
 
 private slots:
     //Function to update sprites
@@ -69,6 +93,7 @@ private slots:
     void onConnected();
     void handleDataFromServer();
     void onError(QAbstractSocket::SocketError socketError);
+    void sendPlayerActions();
 
 };
 

@@ -27,8 +27,13 @@ RESOURCES += \
     resources.qrc
 
 DISTFILES += \
+    images/battlebackground.png \
+    sprites/FreezeAttack_fl.gif \
+    sprites/FreezeIdle_fl.gif \
     sprites/FreezionIdle.gif \
     sprites/IgnisIdle.gif \
+    sprites/RockyAttack_fr.gif \
+    sprites/RockyIdle_fr.gif \
     sprites/freezon_sprite0.png \
     sprites/freezon_sprite1.png \
     sprites/freezon_sprite2.png \

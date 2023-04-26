@@ -17,7 +17,14 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
 
     clientSocket = new QTcpSocket(this);
-    connectToServer("192.168.1.2", 9999); // IP is static iPv4 address for the server
+    connectToServer("127.0.0.1", 9999); // IP is static iPv4 address for the server, CHANGE to 192.169.1.2 before deploying to BBB
+
+    /*Setup background image*/
+    QPixmap backgroundPixmap(":/images/battlebackground.png");
+    QPalette palette;
+    palette.setBrush(QPalette::Window, backgroundPixmap);
+    this->setAutoFillBackground(true);
+    this->setPalette(palette);
 
     /*Manual signal-slot connection for clientSocket*/
     connect(clientSocket, &QTcpSocket::connected, this, &Widget::onConnected);
@@ -35,8 +42,8 @@ Widget::Widget(QWidget *parent)
     player1Sprite = new QLabel(this);
     player2Sprite = new QLabel(this);
     //Load gif animations
-    QMovie *player1Movie = new QMovie(":/sprites/FreezionIdle.gif");
-    QMovie *player2Movie = new QMovie(":/sprites/IgnisIdle.gif");
+    QMovie *player1Movie = new QMovie(":/sprites/RockyIdle_fr.gif");
+    QMovie *player2Movie = new QMovie(":/sprites/FreezeIdle_fl.gif");
     //Set movie to Qlabel objects
     player1Sprite->setMovie(player1Movie);
     player2Sprite->setMovie(player2Movie);
@@ -45,6 +52,10 @@ Widget::Widget(QWidget *parent)
     player2Movie->start();
     player1Sprite->move(130, 150);
     player2Sprite->move(260, 150);
+
+    /*Setup delay timer */
+    delayTimer = new QTimer(this);
+    connect(delayTimer, &QTimer::timeout, this, &Widget::playAnimations);
 
 }
 
@@ -61,26 +72,49 @@ void Widget::onConnected() {
 
 /*Update health*/
 void Widget::handleDataFromServer() {
+    qDebug() << "handleDataFromServer: Inside the function";
     // Read the data from the server
     QByteArray data = clientSocket->readAll();
-    if (data.size() >= static_cast<int>(2 * sizeof(int))) {
-        // Process the received data
-        QDataStream stream(&data, QIODevice::ReadOnly);
-        stream >> player1.health >> player2.health;
+    qDebug() << "Received data from server:" << data;
 
-        // Update health bars
-        ui->healthbarP1->setValue(player1.health);
-        ui->healthbarP2->setValue(player2.health);
-    } else {
-        qWarning() << "Received incomplete data from the server";
-    }
+    QDataStream stream(&data, QIODevice::ReadOnly);
+    int player1Health, player2Health, player1ActionInt, player2ActionInt;
+    stream >> player1Health >> player2Health >> player1ActionInt >> player2ActionInt;
+
+    player1.health = player1Health;
+    player2.health = player2Health;
+    player1Action = static_cast<Action>(player1ActionInt);
+    player2Action = static_cast<Action>(player2ActionInt);
+
+    // Update health bars
+    ui->healthbarP1->setValue(player1.health);
+    ui->healthbarP2->setValue(player2.health);
+
+    qDebug() << "Deserialized values:"
+             << "Player 1 Health:" << player1Health
+             << "Player 2 Health:" << player2Health
+             << "Player 1 Action:" << static_cast<int>(player1Action)
+             << "Player 2 Action:" << static_cast<int>(player2Action);
+
+
+    // Play the received animations
+    playAnimations();
 }
 
+
+
+
 /*Send data to server*/
-void Widget::sendDataToServer(const QByteArray &data) {
+void Widget::sendDataToServer(Action player1Action, Action player2Action) {
+        qDebug() << "sendDataToServer: Inside the function";
     // Check if there is a valid connection
     if (clientSocket && clientSocket->state() == QAbstractSocket::ConnectedState) {
         // Send the data to the server
+        QByteArray data;
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        stream << static_cast<int>(player1Action) << static_cast<int>(player2Action);
+        qDebug() << "Sending actions to server:" << static_cast<int>(player1Action) << static_cast<int>(player2Action);
+        qDebug() << "Data sent to server:" << data;
         clientSocket->write(data);
     }
 }
@@ -124,23 +158,101 @@ void Widget::handleTouchEvent(QTouchEvent *event) {
 
 /* Handler for server-client connection */
 void Widget::lattackP2_clicked() {
-    QByteArray actionData("lattackP2");
-    sendDataToServer(actionData);
+    sendDataToServer(Action::None, Action::LightAttack);
 }
 
 void Widget::sattackP2_clicked() {
-    QByteArray actionData("sattackP2");
-    sendDataToServer(actionData);
+    sendDataToServer(Action::None, Action::StrongAttack);
 }
 
 void Widget::blockP2_clicked() {
-    QByteArray actionData("blockP2");
-    sendDataToServer(actionData);
+    sendDataToServer(Action::None, Action::Block);
 }
 
 void Widget::potionP2_clicked() {
-    QByteArray actionData("potionP2");
-    sendDataToServer(actionData);
+    sendDataToServer(Action::None, Action::Potion);
+}
+
+void Widget::sendPlayerActions() {
+    if (clientSocket && clientSocket->state() == QAbstractSocket::ConnectedState) {
+        qDebug() << "sendPlayerActions: Inside the function";
+        QByteArray data;
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        stream << player1.health << player2.health << static_cast<int>(player1Action) << static_cast<int>(player2Action);
+        clientSocket->write(data);
+        qDebug() << "Sent data to server:" << data;
+    }
+}
+
+void Widget::updateHealthBars() {
+    ui->healthbarP1->setValue(player1.health);
+    ui->healthbarP2->setValue(player2.health);
+}
+
+void Widget::playAnimations() {
+    // Stop the timer
+    delayTimer->stop();
+
+    qDebug() << "Player 1 action:" << static_cast<int>(player1Action);
+    qDebug() << "Player 2 action:" << static_cast<int>(player2Action);
+
+    // Update the QMovie instances with the attack animations or idle animations based on player actions
+    QMovie *player1Movie = nullptr;
+    QMovie *player2Movie = nullptr;
+
+    if (player1Action == Action::LightAttack || player1Action == Action::StrongAttack) {
+        player1Movie = new QMovie(":/sprites/RockyAttack_fr.gif", QByteArray(), player1Sprite);
+    } else {
+        player1Movie = new QMovie(":/sprites/RockyIdle_fr.gif", QByteArray(), player1Sprite);
+    }
+
+    if (player2Action == Action::LightAttack || player2Action == Action::StrongAttack) {
+        player2Movie = new QMovie(":/sprites/FreezeAttack_fl.gif", QByteArray(), player2Sprite);
+    } else {
+        player2Movie = new QMovie(":/sprites/FreezeIdle_fl.gif", QByteArray(), player2Sprite);
+    }
+
+    // Check the validity of the QMovie objects after initializing them
+    // Delete existing QMovie objects
+    if (player1Sprite->movie()) {
+        delete player1Sprite->movie();
+    }
+    if (player2Sprite->movie()) {
+        delete player2Sprite->movie();
+    }
+
+    player1Sprite->setMovie(player1Movie);
+    player2Sprite->setMovie(player2Movie);
+
+    // Start the animations
+    player1Movie->start();
+    player2Movie->start();
+
+    // Reset the animations back to idle after a short delay (2000 ms = 2 seconds)
+    QMetaObject::invokeMethod(this, "resetIdleAnimations", Qt::QueuedConnection, Q_ARG(int, 2000));
+}
+
+
+void Widget::resetIdleAnimations(int delay) {
+    qDebug() << "resetIdleAnimations: Inside the function";
+    QTimer::singleShot(delay, [this] {
+        QMovie *player1IdleMovie = new QMovie(":/sprites/RockyIdle_fr.gif");
+        QMovie *player2IdleMovie = new QMovie(":/sprites/FreezeIdle_fl.gif");
+
+        player1Sprite->setMovie(player1IdleMovie);
+        player2Sprite->setMovie(player2IdleMovie);
+
+        player1IdleMovie->start();
+        player2IdleMovie->start();
+    });
+}
+
+void Widget::printDeserializedValues(qint32 player1Health, qint32 player2Health, qint32 player1Action, qint32 player2Action) {
+    qDebug() << "Deserialized values:"
+             << "Player 1 Health:" << player1Health
+             << "Player 2 Health:" << player2Health
+             << "Player 1 Action:" << player1Action
+             << "Player 2 Action:" << player2Action;
 }
 
 Widget::~Widget()
