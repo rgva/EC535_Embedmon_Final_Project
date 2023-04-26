@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file>sprites/freezon_sprite0.png</file>
+        <file>sprites/freezon_sprite1.png</file>
+        <file>sprites/freezon_sprite2.png</file>
+        <file>sprites/ignis_sprite0.png</file>
+        <file>sprites/ignis_sprite1.png</file>
+        <file>sprites/ignis_sprite2.png</file>
+        <file>sprites/FreezionIdle.gif</file>
+        <file>sprites/IgnisIdle.gif</file>
+        <file>images/battlebackground.png</file>
+        <file>sprites/RockyIdle_fr.gif</file>
+        <file>sprites/FreezeIdle_fl.gif</file>
+        <file>sprites/FreezeAttack_fl.gif</file>
+        <file>sprites/RockyAttack_fr.gif</file>
+    </qresource>
+</RCC>
