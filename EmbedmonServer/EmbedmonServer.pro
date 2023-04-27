@@ -29,6 +29,7 @@ RESOURCES += \
 
 DISTFILES += \
     images/battlebackground.png \
+    images/battlebackground2.png \
     sprites/FreezeAttack_fl.gif \
     sprites/FreezeIdle_fl.gif \
     sprites/FreezionIdle.gif \

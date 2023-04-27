@@ -78,14 +78,14 @@ private:
     QTimer *delayTimer;
     /*Actions*/
     Action player1Action;
-    Action player2Action;
+    Action player2Action = Action::None;
     /*Animations*/
-    void playAnimations();
+    void playAnimations(Action player1Action, Action player2Action);
     /*Debuggin*/
     void printDeserializedValues(qint32 player1Health, qint32 player2Health, qint32 player1Action, qint32 player2Action);
 
 
-    void sendDataToServer(Action player1Action, Action player2Action);
+    void sendDataToServer(Action player2Action);
 
 private slots:
     //Function to update sprites
@@ -94,6 +94,7 @@ private slots:
     void handleDataFromServer();
     void onError(QAbstractSocket::SocketError socketError);
     void sendPlayerActions();
+    void resetGame();
 
 };
 

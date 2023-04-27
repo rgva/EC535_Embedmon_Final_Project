@@ -13,5 +13,6 @@
         <file>sprites/FreezeIdle_fl.gif</file>
         <file>sprites/RockyAttack_fr.gif</file>
         <file>sprites/RockyIdle_fr.gif</file>
+        <file>images/battlebackground2.png</file>
     </qresource>
 </RCC>

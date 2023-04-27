@@ -17,10 +17,10 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
 
     clientSocket = new QTcpSocket(this);
-    connectToServer("127.0.0.1", 9999); // IP is static iPv4 address for the server, CHANGE to 192.169.1.2 before deploying to BBB
+    connectToServer("192.162.1.2", 9999); // IP is static iPv4 address for the server, CHANGE to 192.169.1.2 before deploying to BBB
 
     /*Setup background image*/
-    QPixmap backgroundPixmap(":/images/battlebackground.png");
+    QPixmap backgroundPixmap(":/images/battlebackground2.png");
     QPalette palette;
     palette.setBrush(QPalette::Window, backgroundPixmap);
     this->setAutoFillBackground(true);
@@ -55,8 +55,12 @@ Widget::Widget(QWidget *parent)
 
     /*Setup delay timer */
     delayTimer = new QTimer(this);
-    connect(delayTimer, &QTimer::timeout, this, &Widget::playAnimations);
+    connect(delayTimer, &QTimer::timeout, this, [this]() {
+        playAnimations(player1Action, player2Action);
+    });
 
+    /*Reset game*/
+    //connect(this, &Widget::gameReset, this, &Widget::resetGame);
 }
 
 /*Function to initialize server connection */
@@ -80,7 +84,9 @@ void Widget::handleDataFromServer() {
     QDataStream stream(&data, QIODevice::ReadOnly);
     int player1Health, player2Health, player1ActionInt, player2ActionInt;
     stream >> player1Health >> player2Health >> player1ActionInt >> player2ActionInt;
-
+    if (player1Health == -1 && player2Health == -1) {
+        resetGame(); // Call the resetGame() function on the client side
+    } else {
     player1.health = player1Health;
     player2.health = player2Health;
     player1Action = static_cast<Action>(player1ActionInt);
@@ -98,25 +104,22 @@ void Widget::handleDataFromServer() {
 
 
     // Play the received animations
-    playAnimations();
+    playAnimations(player1Action, player2Action);
+    }
 }
 
 
 
 
-/*Send data to server*/
-void Widget::sendDataToServer(Action player1Action, Action player2Action) {
-        qDebug() << "sendDataToServer: Inside the function";
-    // Check if there is a valid connection
-    if (clientSocket && clientSocket->state() == QAbstractSocket::ConnectedState) {
-        // Send the data to the server
-        QByteArray data;
-        QDataStream stream(&data, QIODevice::WriteOnly);
-        stream << static_cast<int>(player1Action) << static_cast<int>(player2Action);
-        qDebug() << "Sending actions to server:" << static_cast<int>(player1Action) << static_cast<int>(player2Action);
-        qDebug() << "Data sent to server:" << data;
-        clientSocket->write(data);
-    }
+/*Send data to server - CHANGED */
+void Widget::sendDataToServer(Action player2Action) {
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+
+    stream << static_cast<int>(player2Action);
+
+    qDebug() << "Sending actions to server:" << static_cast<int>(player2Action);
+    clientSocket->write(data);
 }
 
 /*Error message conditional function */
@@ -158,19 +161,23 @@ void Widget::handleTouchEvent(QTouchEvent *event) {
 
 /* Handler for server-client connection */
 void Widget::lattackP2_clicked() {
-    sendDataToServer(Action::None, Action::LightAttack);
+    player2Action = Action::LightAttack;
+    sendDataToServer(player2Action);
 }
 
 void Widget::sattackP2_clicked() {
-    sendDataToServer(Action::None, Action::StrongAttack);
+    player2Action = Action::StrongAttack;
+    sendDataToServer(player2Action);
 }
 
 void Widget::blockP2_clicked() {
-    sendDataToServer(Action::None, Action::Block);
+    player2Action = Action::Block;
+    sendDataToServer(player2Action);
 }
 
 void Widget::potionP2_clicked() {
-    sendDataToServer(Action::None, Action::Potion);
+    player2Action = Action::Potion;
+    sendDataToServer(player2Action);
 }
 
 void Widget::sendPlayerActions() {
@@ -189,7 +196,7 @@ void Widget::updateHealthBars() {
     ui->healthbarP2->setValue(player2.health);
 }
 
-void Widget::playAnimations() {
+void Widget::playAnimations(Action player1Action, Action player2Action) {
     // Stop the timer
     delayTimer->stop();
 
@@ -254,6 +261,15 @@ void Widget::printDeserializedValues(qint32 player1Health, qint32 player2Health,
              << "Player 1 Action:" << player1Action
              << "Player 2 Action:" << player2Action;
 }
+
+void Widget::resetGame() {
+    // Reset the game state (e.g., health bars, player actions, etc.)
+    player1.health = 100;
+    player2.health = 100;
+    ui->healthbarP1->setValue(player1.health);
+    ui->healthbarP2->setValue(player2.health);
+    }
+
 
 Widget::~Widget()
 {

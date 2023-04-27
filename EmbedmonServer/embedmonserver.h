@@ -92,11 +92,14 @@ private slots:
     void handleNewConnection();
     void handleDataFromClient();
     void sendDataToClient();
+    void resetGame();
 
 protected:
     bool event(QEvent *event) override;
     void handleTouchEvent(QTouchEvent *event);
 
+signals:
+    void gameReset();
 };
 
 #endif // EMBEDMONSERVER_H

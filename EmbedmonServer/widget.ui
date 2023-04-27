@@ -66,7 +66,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Light Attack</string>
+    <string>L. Attack</string>
    </property>
   </widget>
   <widget class="QPushButton" name="sattackP1">
@@ -84,7 +84,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Strong Attack</string>
+    <string>S. Attack</string>
    </property>
   </widget>
   <widget class="QPushButton" name="blockP1">
