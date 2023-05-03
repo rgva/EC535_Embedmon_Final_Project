@@ -3,8 +3,8 @@ EC535 Lab
 
 ### Running the Game
 
-## Compile EmbedmonServer and EmbedmonClient2
-Add the EmbnedmonServer and EmbedmonClient2 to your workspace. 
+## Compile EmbedmonServer and EmbedmonClient
+Add the EmbedmonServer and EmbedmonClient to your workspace. 
 Run qmake and make to generate executables EmbedmonServer and EmbedmonClient2. 
 Copy the binaries to your $WORKSPACE/rootfs/root folder. 
 ## Set a static iPv4 address for Client and Server instances of the game. 
@@ -42,4 +42,4 @@ First, start EmbedmonServer by passing the argument in your serial screen: ./Emb
 Then, start EmbedmonClient2 by passing the argument in your serial screen: ./EmbedmonClient2
 
 ## Play the game!
-Instructions TBD
+Each player can then pick an action to perform: a Light Attack, a Strong Attack, Block, or Potion. Once both players have chosen an action, the round will execute. Whoever brings the opponent's health down to 0 first wins!
