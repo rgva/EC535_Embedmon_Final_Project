@@ -17,7 +17,7 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
 
     clientSocket = new QTcpSocket(this);
-    connectToServer("192.162.1.2", 9999); // IP is static iPv4 address for the server, CHANGE to 192.169.1.2 before deploying to BBB
+    connectToServer("192.168.1.2", 9999); // IP is static iPv4 address for the server, CHANGE to 192.169.1.2 before deploying to BBB
 
     /*Setup background image*/
     QPixmap backgroundPixmap(":/images/battlebackground2.png");
